@@ -37,6 +37,7 @@ def list_models():
         "data": [
             {
                 "id": model_name,
+                "name": model.name,  # 添加模型的 name 属性
                 "show": model.model_info.get('show', model_name),
                 "object": "model",
                 "created": None,
@@ -51,22 +52,60 @@ def list_models():
 
 @app.route("/v1/chat/completions", methods=['POST'])
 def chat_completions():
-    data = request.json
+    # 尝试获取 JSON 数据，兼容多种情况
+    data = request.get_json(silent=True, force=True)
+    
+    # 如果仍然无法解析，尝试手动解析
+    if data is None:
+        try:
+            import json as json_lib
+            data = json_lib.loads(request.data.decode('utf-8'))
+        except:
+            return jsonify({
+                "error": {
+                    "message": "Invalid JSON in request body. Please ensure the request body contains valid JSON.",
+                    "type": "invalid_request_error",
+                    "param": None,
+                    "code": "invalid_json"
+                }
+            }), 400
+    
+    # 验证必要参数
+    if not isinstance(data, dict):
+        return jsonify({
+            "error": {
+                "message": "Request body must be a JSON object.",
+                "type": "invalid_request_error",
+                "param": None,
+                "code": "invalid_format"
+            }
+        }), 400
+    
     stream = data.get("stream", False)
     with_search = data.get("with_search", False)
     model = data.get("model", "__USTC_Adapter__deepseek-r1")
     messages = data.get("messages", [])
     tools = data.get("tools", [])
 
+    # 模型名称映射：支持使用模型的 name 属性作为 ID
     if model not in core.models:
-        return jsonify({
-            "error": {
-                "message": f"Model '{model}' not found",
-                "type": "invalid_request_error",
-                "param": None,
-                "code": None
-            }
-        }), 400
+        # 尝试通过模型的 name 属性查找
+        found = False
+        for model_id, model_obj in core.models.items():
+            if model_obj.name == model:
+                model = model_id
+                found = True
+                break
+        
+        if not found:
+            return jsonify({
+                "error": {
+                    "message": f"Model '{model}' not found",
+                    "type": "invalid_request_error",
+                    "param": None,
+                    "code": None
+                }
+            }), 400
     
     try:
         response = core.models[model].get_response(messages, stream=stream, with_search=with_search, tools=tools)
@@ -148,7 +187,33 @@ def claude_to_openai_tools(claude_tools):
 
 @app.route("/v1/messages", methods=['POST'])
 def messages():
-    data = request.json
+    # 尝试获取 JSON 数据，兼容多种情况
+    data = request.get_json(silent=True, force=True)
+    
+    # 如果仍然无法解析，尝试手动解析
+    if data is None:
+        try:
+            import json as json_lib
+            data = json_lib.loads(request.data.decode('utf-8'))
+        except:
+            return jsonify({
+                "type": "error",
+                "error": {
+                    "type": "invalid_request_error",
+                    "message": "Invalid JSON in request body. Please ensure the request body contains valid JSON."
+                }
+            }), 400
+    
+    # 验证必要参数
+    if not isinstance(data, dict):
+        return jsonify({
+            "type": "error",
+            "error": {
+                "type": "invalid_request_error",
+                "message": "Request body must be a JSON object."
+            }
+        }), 400
+    
     model = data.get("model")
     if not model:
         return jsonify({
@@ -158,12 +223,26 @@ def messages():
                 "message": "model is required"
             }
         }), 400
+    
+    # 模型名称映射：支持使用模型的 name 属性作为 ID
     if model not in core.models:
-        for model_txt in core.models:
-            if model_txt.lower() == model.lower():
-                model = model_txt
+        # 先尝试通过模型的 name 属性查找
+        found = False
+        for model_id, model_obj in core.models.items():
+            if model_obj.name == model:
+                model = model_id
+                found = True
                 break
-        else:
+        
+        # 如果没找到，再尝试大小写不敏感匹配
+        if not found:
+            for model_txt in core.models:
+                if model_txt.lower() == model.lower():
+                    model = model_txt
+                    found = True
+                    break
+        
+        if not found:
             return jsonify({
                 "type": "error",
                 "error": {

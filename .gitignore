@@ -5,3 +5,6 @@ app.onefile-build/
 dist/
 config
 test.py
+chatvenv/
+venv/
+*.pyc

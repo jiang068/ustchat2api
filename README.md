@@ -1,10 +1,13 @@
-# FkUSTChat 🚀：Flexible & Keystone USTC Chat
+# ustchat2api 🚀：Flexible & Keystone USTC Chat
+
+#### 因为我要在linux上跑 所以我把项目fork下来改了一下（
+
 
 ### 项目简介
 
-FkUSTChat 是一款**轻量级 AI 模型统一 API 网关应用**，旨在解决多厂商、多类型 AI 模型接口不兼容的痛点！🎯 通过智能封装不同 AI 模型的原生接口，我们对外提供**标准化、统一的 API 协议**，让开发者能够快速集成多模型能力，无需再为各模型的接口差异、参数格式或认证方式而头疼！💡
+ustchat2api 是一款**轻量级 AI 模型统一 API 网关应用**，旨在解决多厂商、多类型 AI 模型接口不兼容的痛点！🎯 通过智能封装不同 AI 模型的原生接口，我们对外提供**标准化、统一的 API 协议**，让开发者能够快速集成多模型能力，无需再为各模型的接口差异、参数格式或认证方式而头疼！💡
 
-- 博客链接：[https://blog.yemaster.cn/post/170](https://blog.yemaster.cn/post/170)
+- 原作者博客链接：[https://blog.yemaster.cn/post/170](https://blog.yemaster.cn/post/170)
 
 ### ✨ 核心特色
 
@@ -46,40 +49,61 @@ FkUSTChat 是一款**轻量级 AI 模型统一 API 网关应用**，旨在解决
 
 #### Windows 系统
 
-- 需要安装 Microsoft Edge 浏览器
+- 需要安装 Microsoft Edge 浏览器 (默认)
+- 也可以选择使用 Firefox 或 Chrome (通过环境变量 `BROWSER` 指定)
 
 #### Mac OS 系统
 
-- 需要用以下命令启动 SafariDriver:
+- 默认使用 Safari 浏览器 (需要启动 SafariDriver):
   
   ```bash
   safaridriver --enable
   ```
+- 也可以选择使用 Firefox、Chrome 或 Edge (通过环境变量 `BROWSER` 指定)
+
+#### Linux 系统 🐧
+
+- 默认使用 Firefox 浏览器
+- 也支持 Chrome 或 Edge
+
+**指定浏览器**:
+```bash
+# 使用 Firefox (Linux 默认)
+python app.py
+
+# 使用 Chrome
+BROWSER=chrome python app.py
+
+# 使用 Edge
+BROWSER=edge python app.py
+```
 
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/yemaster/fkustchat
-cd fkustchat
+git clone https://github.com/jiang068/ustchat2api
+# 如果连不上就加代理：
+# git clone https://gh-proxy.org/https://github.com/jiang068/ustchat2api
+cd ustchat2api
 ```
 
 ### 2. 创建虚拟环境（推荐）
 
 ```bash
 # 创建虚拟环境
-python -m venv venv
+python -m venv chatvenv
 
 # 激活环境
 # Windows
-venv\Scripts\activate
+chatvenv\Scripts\activate
 # Linux/macOS
-source venv/bin/activate
+source chatvenv/bin/activate
 ```
 
 ### 3. 安装依赖
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt -i https://pypi.mirrors.ustc.edu.cn/simple
 ```
 
 ### 4. 启动应用
@@ -95,7 +119,17 @@ python app.py
 
 ### 5. 配置认证身份信息
 
-但是此时还是不能使用 USTC Chat 相关的模型。我们首先切换 USTC Chat 相关模型：USTC Deepseek r1 或 USTC Deepseek v3，随便输入点什么消息发送，会提示：`USTC Chat 适配器需要你的科大账号和密码才能登录，请在 ./config 文件中编辑`，这时候会在项目根目录下创建 `config` 文件，格式为 JSON 格式，编辑其中内容，将 username 和 password 设置为 USTC 的统一身份认证账号密码即可。
+但是此时还是不能使用 USTC Chat 相关的模型。我们首先切换 USTC Chat 相关模型：USTC Deepseek r1 或 USTC Deepseek v3，随便输入点什么消息发送，会提示：`USTC Chat 适配器需要你的科大账号和密码才能登录，请在 ./config 文件中编辑`，这时候会在项目根目录下创建 `config` 文件，格式为 JSON 格式，编辑其中内容，将 username 和 password 设置为 USTC 的统一身份认证账号密码。
+
+
+然后在环境里启动test_login.py获取登录凭证（？）：
+```bash
+python test_login.py
+```
+弹出窗口后应该会自动登录，如果有二次验证你需要手动过一下二次验证。验证好后脚本会自动抓你的登录凭证。
+
+然后就可以开始使用了。
+
 
 ## 📚 调用示例
 
@@ -111,38 +145,6 @@ ANTHROPIC_MODEL=__USTC_Adapter__deepseek-v3
 
 然后启动 `claude` 即可。
 
-### 代码调用
-
-我们提供了多种编程语言的调用示例，位于 `examples/` 文件夹中。
-
-- Python 简单 requests 调用：[/examples/simple_chat.py](/examples/simple_chat.py)
-- Python 用 openAI 库实现多轮对话：[/examples/long_chat_with_openai.py](/examples/long_chat_with_openai.py)
-- Python 简单 Agent 示例：[/example/agent.py](/example/agent.py)
-
-API 地址：`http://127.0.0.1:5000`，API KEY：可以任意填写。
-
-### 🔧 接入器配置
-
-#### 自动管理机制
-
-- ✅ **启用**：将适配器文件放入 `adapters/` 文件夹
-- ❌ **禁用**：将文件移至 `disabled_adapters/` 文件夹
-
-### 🛠️ 开发者指南
-
-#### 自定义适配器开发
-
-TODO
-
-### 🤝 贡献指南
-
-我们热烈欢迎社区贡献！🌟
-
-1. Fork 本仓库
-2. 创建功能分支：`git checkout -b feature/AmazingFeature`
-3. 提交更改：`git commit -m 'Add some AmazingFeature'`
-4. 推送分支：`git push origin feature/AmazingFeature`
-5. 开启 Pull Request
 
 ### 📝 更新日志
 
@@ -162,6 +164,3 @@ TODO
 
 ------
 
-**开始你的多模型 AI 之旅吧！** 🚀✨
-
-*如有问题或建议，欢迎提交 Issue 或参与讨论！*

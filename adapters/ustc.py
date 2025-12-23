@@ -10,6 +10,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.microsoft import EdgeChromiumDriverManager
+from webdriver_manager.firefox import GeckoDriverManager
+from webdriver_manager.chrome import ChromeDriverManager
 
 from adapters.base import FkUSTChat_BaseAdapter, FkUSTChat_BaseModel
 
@@ -287,72 +289,217 @@ class USTC_Adapter(FkUSTChat_BaseAdapter):
         return False
 
     def do_login(self, username, password):
-        if sys.platform.startswith('win32'):
-            try:
-                edge_driver_path = EdgeChromiumDriverManager().install()
-            except:
-                edge_driver_path = path.join(path.dirname(__file__), "../dependencies/msedgedriver.exe")
-            options = webdriver.EdgeOptions()
-            service = webdriver.EdgeService(executable_path=edge_driver_path)
-            driver = webdriver.Edge(service=service, options=options)
-        elif sys.platform.startswith('darwin'):
-            driver = webdriver.Safari()
-        else:
-            raise SystemError("Unsupported OS.")
+        """
+        执行登录操作,支持多平台和多浏览器
         
+        环境变量配置:
+        - BROWSER: 指定浏览器类型 (firefox/chrome/edge/safari)，默认根据系统自动选择
+        
+        :param username: 用户名
+        :param password: 密码
+        :return: 登录成功返回 token，失败返回 False
+        """
+        # 获取环境变量指定的浏览器,如果没有则根据系统选择
+        import os
+        browser_choice = os.environ.get('BROWSER', '').lower()
+        
+        driver = None
+        browser_name = ""
+        
+        try:
+            if sys.platform.startswith('win32'):
+                # Windows 默认使用 Edge
+                if browser_choice == 'firefox':
+                    browser_name = "Firefox"
+                    print(f"[*] 正在启动 {browser_name} 浏览器...")
+                    options = webdriver.FirefoxOptions()
+                    service = webdriver.FirefoxService(GeckoDriverManager().install())
+                    driver = webdriver.Firefox(service=service, options=options)
+                elif browser_choice == 'chrome':
+                    browser_name = "Chrome"
+                    print(f"[*] 正在启动 {browser_name} 浏览器...")
+                    options = webdriver.ChromeOptions()
+                    service = webdriver.ChromeService(ChromeDriverManager().install())
+                    driver = webdriver.Chrome(service=service, options=options)
+                else:  # 默认使用 edge
+                    browser_name = "Edge"
+                    print(f"[*] 正在启动 {browser_name} 浏览器...")
+                    try:
+                        edge_driver_path = EdgeChromiumDriverManager().install()
+                    except:
+                        edge_driver_path = path.join(path.dirname(__file__), "../dependencies/msedgedriver.exe")
+                    options = webdriver.EdgeOptions()
+                    service = webdriver.EdgeService(executable_path=edge_driver_path)
+                    driver = webdriver.Edge(service=service, options=options)
+                    
+            elif sys.platform.startswith('darwin'):
+                # macOS 默认使用 Safari
+                if browser_choice == 'firefox':
+                    browser_name = "Firefox"
+                    print(f"[*] 正在启动 {browser_name} 浏览器...")
+                    options = webdriver.FirefoxOptions()
+                    service = webdriver.FirefoxService(GeckoDriverManager().install())
+                    driver = webdriver.Firefox(service=service, options=options)
+                elif browser_choice == 'chrome':
+                    browser_name = "Chrome"
+                    print(f"[*] 正在启动 {browser_name} 浏览器...")
+                    options = webdriver.ChromeOptions()
+                    service = webdriver.ChromeService(ChromeDriverManager().install())
+                    driver = webdriver.Chrome(service=service, options=options)
+                elif browser_choice == 'edge':
+                    browser_name = "Edge"
+                    print(f"[*] 正在启动 {browser_name} 浏览器...")
+                    options = webdriver.EdgeOptions()
+                    service = webdriver.EdgeService(EdgeChromiumDriverManager().install())
+                    driver = webdriver.Edge(service=service, options=options)
+                else:  # 默认使用 safari
+                    browser_name = "Safari"
+                    print(f"[*] 正在启动 {browser_name} 浏览器...")
+                    driver = webdriver.Safari()
+                    
+            elif sys.platform.startswith('linux'):
+                # Linux 默认使用 Firefox
+                if browser_choice == 'chrome':
+                    browser_name = "Chrome"
+                    print(f"[*] 正在启动 {browser_name} 浏览器...")
+                    options = webdriver.ChromeOptions()
+                    # 可选: 添加无头模式
+                    # options.add_argument('--headless')
+                    # 禁用 GPU (在某些 Linux 环境中需要)
+                    options.add_argument('--disable-gpu')
+                    # 禁用 /dev/shm 使用 (Docker 环境)
+                    options.add_argument('--disable-dev-shm-usage')
+                    # 无沙箱模式 (某些环境需要,但降低安全性)
+                    # options.add_argument('--no-sandbox')
+                    print("[*] 正在下载/安装 ChromeDriver...")
+                    service = webdriver.ChromeService(ChromeDriverManager().install())
+                    driver = webdriver.Chrome(service=service, options=options)
+                elif browser_choice == 'edge':
+                    browser_name = "Edge"
+                    print(f"[*] 正在启动 {browser_name} 浏览器...")
+                    options = webdriver.EdgeOptions()
+                    # 可选: 添加无头模式
+                    # options.add_argument('--headless')
+                    options.add_argument('--disable-gpu')
+                    options.add_argument('--disable-dev-shm-usage')
+                    # options.add_argument('--no-sandbox')
+                    print("[*] 正在下载/安装 EdgeDriver...")
+                    service = webdriver.EdgeService(EdgeChromiumDriverManager().install())
+                    driver = webdriver.Edge(service=service, options=options)
+                else:  # 默认使用 firefox
+                    browser_name = "Firefox"
+                    print(f"[*] 正在启动 {browser_name} 浏览器...")
+                    options = webdriver.FirefoxOptions()
+                    # 可选: 添加无头模式
+                    # options.add_argument('--headless')
+                    print("[*] 正在下载/安装 GeckoDriver...")
+                    service = webdriver.FirefoxService(GeckoDriverManager().install())
+                    driver = webdriver.Firefox(service=service, options=options)
+            else:
+                raise SystemError(f"不支持的操作系统: {sys.platform}")
+            
+            if driver is None:
+                raise SystemError("浏览器驱动初始化失败")
+                
+            print(f"[+] {browser_name} 浏览器启动成功!")
+            
+        except Exception as e:
+            print(f"[!] 启动浏览器时出错: {str(e)}")
+            print(f"[!] 浏览器类型: {browser_name or browser_choice or '默认'}")
+            print(f"[!] 操作系统: {sys.platform}")
+            print("\n[*] 故障排除建议:")
+            if sys.platform.startswith('linux'):
+                print("    1. 确认已安装浏览器: firefox --version 或 google-chrome --version")
+                print("    2. 如果是远程SSH,需要 X11 转发或使用无头模式")
+                print("    3. 检查 DISPLAY 环境变量: echo $DISPLAY")
+                print("    4. 尝试使用无头模式 (编辑 adapters/ustc.py,取消 --headless 注释)")
+            raise
+        
+        print("[*] 正在最大化浏览器窗口...")
         driver.maximize_window()
 
+        print("[*] 正在访问 USTC 统一身份认证页面...")
         driver.get("https://id.ustc.edu.cn/cas/login?service=https:%2F%2Fchat.ustc.edu.cn%2Fustchat%2F")
 
         try:
+            print("[*] 等待登录页面加载...")
             user_input = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, "//input[@placeholder='请输入学工号/GID']"))
             )
             pass_input = driver.find_element(By.XPATH, "//input[@placeholder='请输入密码']")
 
+            print("[*] 登录页面加载完成")
+            
             if username and password:
+                print("[*] 正在填写用户名和密码...")
                 user_input.send_keys(username)
                 pass_input.send_keys(password)
 
+                print("[*] 正在点击登录按钮...")
                 login_btn = driver.find_element(By.ID, "submitBtn")
                 login_btn.click()
+                print("[+] 登录请求已提交")
+            else:
+                print("[!] 警告: 用户名或密码为空,请手动登录")
         except Exception as e:
+            print(f"[!] 登录过程出错: {str(e)}")
             driver.quit()
             return False
         
+        print("[*] 等待页面跳转... (如需二次认证,请在浏览器中完成)")
         tries = 0
         while True:
             time.sleep(1)
             tries += 1
             if tries > 30:
+                print(f"[!] 登录超时 (等待了 {tries} 秒)")
+                driver.quit()
                 return False
             url = driver.current_url
+            print(f"[*] 当前 URL ({tries}s): {url[:50]}...")
+            
             if url.startswith("https://chat.ustc.edu.cn/ustchat"):
+                print("[+] 页面已跳转到 USTC Chat!")
                 # 从 localStorage 获取 token
                 try:
+                    print("[*] 正在从 localStorage 获取 token...")
                     user_store = driver.execute_script("return JSON.parse(window.localStorage.getItem(\"ustchat-user-store\"));")
                     state = user_store.get('state', {})
                     is_login = state.get('isLogin', False)
                     if is_login:
                         token = state.get('token', '')
+                        print(f"[+] 成功获取 token: {token[:20]}...")
                         self.set_config('credentials', token)
+                        print("[+] Token 已保存到配置文件")
                         driver.quit()
+                        print("[+] 浏览器已关闭")
                         return token
+                    else:
+                        print("[!] 警告: localStorage 中 isLogin=False")
                 except Exception as e:
+                    print(f"[!] 获取 token 时出错: {str(e)}")
                     pass
 
     def get_credentials(self):
+        print("[*] 检查登录状态...")
         if not self.is_login():
-            print(self.config)
+            print("[*] 未登录,需要进行登录操作")
+            print(f"[*] 当前配置: {self.config}")
             username = self.config.get('username')
             password = self.config.get('password')
-            print(username, password)
+            print(f"[*] 用户名: {username}")
+            print(f"[*] 密码: {'*' * len(password) if password else 'None'}")
             if not username or not password or username == 'PB********' or password == 'PASSWORD HERE':
                 self.set_config('username', 'PB********')
                 self.set_config('password', 'PASSWORD HERE')
                 raise ValueError("USTC Chat 适配器需要你的科大账号和密码才能登录，请在 ./config 文件中编辑")
+            print("[*] 开始登录流程...")
             credentials = self.do_login(username, password)
+            if not credentials:
+                raise ValueError("登录失败,请检查用户名和密码")
+            print("[+] 登录成功!")
         else:
+            print("[+] 已登录,使用现有凭据")
             credentials = self.config.get('credentials', 'none')
         return credentials
     
