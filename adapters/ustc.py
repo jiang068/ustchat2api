@@ -232,6 +232,8 @@ class USTC_Adapter(FkUSTChat_BaseAdapter):
             "fool": USTC_FOOL_Model(self)
         }
 
+        self.last_login_check = 0
+
     def configure_format(self):
         return {
             "username": {
@@ -481,26 +483,33 @@ class USTC_Adapter(FkUSTChat_BaseAdapter):
                     pass
 
     def get_credentials(self):
-        print("[*] 检查登录状态...")
-        if not self.is_login():
-            print("[*] 未登录,需要进行登录操作")
-            print(f"[*] 当前配置: {self.config}")
-            username = self.config.get('username')
-            password = self.config.get('password')
-            print(f"[*] 用户名: {username}")
-            print(f"[*] 密码: {'*' * len(password) if password else 'None'}")
-            if not username or not password or username == 'PB********' or password == 'PASSWORD HERE':
-                self.set_config('username', 'PB********')
-                self.set_config('password', 'PASSWORD HERE')
-                raise ValueError("USTC Chat 适配器需要你的科大账号和密码才能登录，请在 ./config 文件中编辑")
-            print("[*] 开始登录流程...")
-            credentials = self.do_login(username, password)
-            if not credentials:
-                raise ValueError("登录失败,请检查用户名和密码")
-            print("[+] 登录成功!")
+        import time
+        current_time = time.time()
+        if current_time - self.last_login_check > 60:  # 1分钟检查一次登录状态
+            print("[*] 检查登录状态...")
+            if not self.is_login():
+                print("[*] 未登录,需要进行登录操作")
+                print(f"[*] 当前配置: {self.config}")
+                username = self.config.get('username')
+                password = self.config.get('password')
+                print(f"[*] 用户名: {username}")
+                print(f"[*] 密码: {'*' * len(password) if password else 'None'}")
+                if not username or not password or username == 'PB********' or password == 'PASSWORD HERE':
+                    self.set_config('username', 'PB********')
+                    self.set_config('password', 'PASSWORD HERE')
+                    raise ValueError("USTC Chat 适配器需要你的科大账号和密码才能登录，请在 ./config 文件中编辑")
+                print("[*] 开始登录流程...")
+                credentials = self.do_login(username, password)
+                if not credentials:
+                    raise ValueError("登录失败,请检查用户名和密码")
+                print("[+] 登录成功!")
+                self.last_login_check = current_time
+            else:
+                print("[+] 已登录,使用现有凭据")
+                self.last_login_check = current_time
         else:
-            print("[+] 已登录,使用现有凭据")
-            credentials = self.config.get('credentials', 'none')
+            print("[+] 使用缓存的登录状态")
+        credentials = self.config.get('credentials', 'none')
         return credentials
     
     def enter_queue(self):
